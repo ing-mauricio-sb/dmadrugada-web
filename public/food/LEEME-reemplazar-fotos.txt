@@ -1,0 +1,21 @@
+FOTOS PLACEHOLDER — REEMPLAZAR ANTES DE VENDER / PUBLICAR
+=========================================================
+
+Estas imágenes son PLACEHOLDERS de licencia libre (comida por keyword, vía LoremFlickr).
+NO son los platos reales de D'Madrugada. Reemplázalas por las fotos reales del Instagram
+(@dmadrugadacix), manteniendo EXACTAMENTE estos nombres de archivo:
+
+  public/food/hero.jpg      -> foto estrella del hero (plato caliente, oscuro/moody)  ~1600x1100
+  public/food/alitas.jpg    -> alitas BBQ                                              ~1000x1200
+  public/food/chaufa.jpg    -> chaufa                                                  ~1000x1200
+  public/food/broaster.jpg  -> broaster + papas                                        ~1000x1200
+  public/food/burger.jpg    -> hamburguesa                                             ~1000x1200
+  public/city-chiclayo-night.jpg -> calle de Chiclayo de noche (fondo del hero)        ~1600x900
+  public/og.jpg             -> imagen para redes sociales (Open Graph)                 1200x630
+
+Consejo: exporta las fotos del IG en la mayor resolución posible y recórtalas al alto/ancho
+indicado para que se vean nítidas. El tratamiento oscuro con glow azul/ámbar lo aplica el CSS
+automáticamente, así que no necesitas editarlas.
+
+LOGO: el header/footer usan un ícono de luna + wordmark como placeholder de marca. Si tienes
+el logo real, colócalo y avísame para integrarlo.
