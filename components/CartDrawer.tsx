@@ -1,166 +1,133 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { X, Plus, Minus, Trash2, ShoppingBag, MapPin, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import {
+  X,
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingBag,
+  MapPin,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useCart, buildOrderMessage } from "@/lib/cart";
 import { formatPrice } from "@/lib/menu";
-import { ZONES } from "@/lib/zones";
+import { ZONES, CITY_CENTER, nearestZone, matchZoneName } from "@/lib/zones";
+import { geocoder, mapsLink } from "@/lib/geocode";
 import { waLink } from "@/lib/site";
 import { WhatsAppGlyph } from "./WhatsAppGlyph";
+import type { MapChange } from "./DeliveryLocationMap";
 
-/** Lowercase, strip accents + parenthetical, collapse to plain words. */
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .replace(/\(.*?\)/g, " ")
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+// Leaflet is heavy and touches `window`, so load it only on the client and only
+// when step 2 mounts — keeps it out of the home / carta / zonas bundles.
+const DeliveryLocationMap = dynamic(() => import("./DeliveryLocationMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-60 w-full animate-pulse rounded-2xl border-2 border-hair bg-sky" />
+  ),
+});
 
-/** Best-effort: pick one of our ZONES if a geocoded field contains its name. */
-function matchZoneName(candidates: (string | undefined)[]): string | null {
-  const norm = candidates.filter(Boolean).map((c) => normalize(c as string));
-  for (const z of ZONES) {
-    const zn = normalize(z.name);
-    if (zn && norm.some((c) => c.includes(zn))) return z.name;
-  }
-  return null;
-}
+/** Points beyond this distance from every zone centroid are treated as
+ *  out-of-coverage (don't auto-pick a wrong district). */
+const COVERAGE_KM = 12;
 
-/** Great-circle distance in km. */
-function distanceKm(
-  aLat: number,
-  aLng: number,
-  bLat: number,
-  bLng: number,
-): number {
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const R = 6371;
-  const dLat = toRad(bLat - aLat);
-  const dLng = toRad(bLng - aLng);
-  const s =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(aLat)) *
-      Math.cos(toRad(bLat)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  return 2 * R * Math.asin(Math.sqrt(s));
-}
-
-/** Nearest zone (by centroid) to a GPS point — always returns a district. */
-function nearestZone(lat: number, lng: number): string | null {
-  let best: string | null = null;
-  let bestD = Infinity;
-  for (const z of ZONES) {
-    if (typeof z.lat !== "number" || typeof z.lng !== "number") continue;
-    const d = distanceKm(lat, lng, z.lat, z.lng);
-    if (d < bestD) {
-      bestD = d;
-      best = z.name;
-    }
-  }
-  return best;
-}
-
-type NominatimResult = {
-  display_name?: string;
-  address?: Record<string, string>;
-};
-
-/** Reverse-geocode via OpenStreetMap Nominatim (free, no API key). */
-async function reverseGeocode(lat: number, lon: number): Promise<NominatimResult> {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=es`;
-  const res = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!res.ok) throw new Error("reverse geocode failed");
-  return res.json();
-}
-
-/** Slide-over cart with quantity steppers and WhatsApp checkout. */
+/** Slide-over cart: step 1 reviews the order, step 2 captures the exact
+ *  delivery location, then sends everything to WhatsApp. */
 export function CartDrawer() {
   const { items, subtotal, count, open, setOpen, inc, dec, remove, clear } =
     useCart();
+
+  const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [reference, setReference] = useState("");
   const [zone, setZone] = useState("");
-  const [locating, setLocating] = useState(false);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
+    null,
+  );
   const [geoStatus, setGeoStatus] = useState<{ ok: boolean; msg: string } | null>(
     null,
   );
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  const handleLocate = () => {
-    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
-      setGeoStatus({ ok: false, msg: "Tu navegador no soporta ubicación." });
-      return;
-    }
-    setLocating(true);
-    setGeoStatus(null);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setCoords({ lat: latitude, lng: longitude });
-        const near = nearestZone(latitude, longitude);
-        try {
-          const data = await reverseGeocode(latitude, longitude);
-          const a = data.address ?? {};
-          const road = a.road
-            ? `${a.road}${a.house_number ? " " + a.house_number : ""}`
-            : "";
-          const barrio =
-            a.neighbourhood || a.suburb || a.quarter || a.residential || "";
-          const ciudad = a.city || a.town || a.village || "";
-          const composed = [road, barrio, ciudad].filter(Boolean).join(", ");
-          if (composed || data.display_name)
-            setAddress(composed || data.display_name || "");
-          // Prefer an exact name match; otherwise fall back to nearest centroid.
-          const zoneName =
-            matchZoneName([
-              a.suburb,
-              a.city_district,
-              a.neighbourhood,
-              a.quarter,
-              a.residential,
-              a.town,
-              a.village,
-              a.city,
-              data.display_name,
-            ]) ?? near;
-          if (zoneName) setZone(zoneName);
+  const geoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const geoAbort = useRef<AbortController | null>(null);
+
+  // Reverse-geocode the new pin position — debounced (Nominatim ~1 req/s) with
+  // an AbortController so only the latest drag wins.
+  const scheduleReverse = useCallback((lat: number, lng: number) => {
+    if (geoTimer.current) clearTimeout(geoTimer.current);
+    setGeoStatus({ ok: true, msg: "Buscando tu dirección…" });
+    geoTimer.current = setTimeout(async () => {
+      geoAbort.current?.abort();
+      const ctrl = new AbortController();
+      geoAbort.current = ctrl;
+      try {
+        const r = await geocoder.reverse(
+          { lat, lng },
+          { signal: ctrl.signal, lang: "es" },
+        );
+        if (r.address) setAddress(r.address);
+        const near = nearestZone(lat, lng);
+        const far = near.name === null || near.km > COVERAGE_KM;
+        if (far) {
           setGeoStatus({
-            ok: true,
-            msg: zoneName
-              ? `Ubicación detectada · ${zoneName}`
-              : "Ubicación detectada. Revisa tu dirección y elige tu distrito.",
+            ok: false,
+            msg: "Parece que estás fuera de nuestra cobertura. Confírmalo por WhatsApp.",
           });
-        } catch {
-          if (near) setZone(near);
-          setGeoStatus({
-            ok: true,
-            msg: near
-              ? `Ubicación detectada · ${near}. Escribe tu dirección.`
-              : "Ubicación GPS guardada. Escribe tu dirección y elige tu distrito.",
-          });
-        } finally {
-          setLocating(false);
+          return;
         }
-      },
-      (err) => {
-        setLocating(false);
+        const z =
+          matchZoneName([
+            r.fields.suburb,
+            r.fields.cityDistrict,
+            r.fields.neighbourhood,
+            r.fields.quarter,
+            r.fields.residential,
+            r.fields.town,
+            r.fields.village,
+            r.fields.city,
+            r.displayName,
+          ]) ?? near.name;
+        if (z) setZone(z);
+        setGeoStatus({
+          ok: true,
+          msg: z
+            ? `Dirección detectada · ${z}`
+            : "Dirección detectada. Elige tu distrito.",
+        });
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
         setGeoStatus({
           ok: false,
-          msg:
-            err.code === err.PERMISSION_DENIED
-              ? "Permiso denegado. Actívalo o escribe tu dirección."
-              : "No pudimos obtener tu ubicación. Escribe tu dirección.",
+          msg: "No pudimos leer la dirección, escríbela a mano.",
         });
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
-    );
-  };
+      }
+    }, 700);
+  }, []);
+
+  // Map emits every pin move. `init` is ignored so a location is only recorded
+  // after the customer actively places the pin (GPS / drag / tap) — that's what
+  // makes the address truly mandatory.
+  const onMapChange = useCallback(
+    (c: MapChange) => {
+      if (c.source === "init") return;
+      setCoords({ lat: c.lat, lng: c.lng });
+      scheduleReverse(c.lat, c.lng);
+    },
+    [scheduleReverse],
+  );
+
+  const onLocateError = useCallback((msg: string) => {
+    setGeoStatus({ ok: false, msg });
+  }, []);
+
+  // Close and always rewind to the summary so the next open starts on step 1.
+  const close = useCallback(() => {
+    setOpen(false);
+    setStep(1);
+  }, [setOpen]);
 
   // Lock body scroll while the drawer is open.
   useEffect(() => {
@@ -175,19 +142,38 @@ export function CartDrawer() {
   // Close on Escape.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, setOpen]);
+  }, [open, close]);
+
+  // Cancel pending geocode work on unmount.
+  useEffect(() => {
+    return () => {
+      if (geoTimer.current) clearTimeout(geoTimer.current);
+      geoAbort.current?.abort();
+    };
+  }, []);
 
   if (!open) return null;
 
   const selectedZone = ZONES.find((z) => z.name === zone) ?? null;
   const fee = selectedZone?.fee ?? 0;
   const total = subtotal + fee;
-  const mapsUrl = coords
-    ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}`
-    : undefined;
+  const trimmedAddress = address.trim();
+  const mapsUrl = coords ? mapsLink(coords.lat, coords.lng) : undefined;
+
+  const canSubmit =
+    count > 0 && !!selectedZone && trimmedAddress.length >= 6 && !!coords;
+
+  const blockReason = !coords
+    ? "Marca tu ubicación en el mapa"
+    : trimmedAddress.length < 6
+      ? "Escribe o confirma tu dirección"
+      : !selectedZone
+        ? "Elige tu distrito para continuar"
+        : null;
+
   const message = buildOrderMessage(items, subtotal, {
     name,
     address,
@@ -198,35 +184,72 @@ export function CartDrawer() {
   });
 
   return (
-    <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true" aria-label="Mi pedido">
+    <div
+      className="fixed inset-0 z-[60]"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Mi pedido"
+    >
       {/* backdrop */}
       <button
         type="button"
         aria-label="Cerrar"
-        onClick={() => setOpen(false)}
+        onClick={close}
         className="absolute inset-0 bg-night/50 backdrop-blur-sm"
       />
 
       {/* panel */}
       <div className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-paper shadow-2xl">
-        <header className="flex items-center justify-between border-b-2 border-hair px-5 py-4">
-          <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink">
-            <ShoppingBag className="h-6 w-6 text-blue" strokeWidth={2} aria-hidden="true" />
-            Mi pedido
-          </h2>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Cerrar"
-            className="grid h-9 w-9 place-items-center rounded-full text-ink transition hover:bg-blue/10"
-          >
-            <X className="h-6 w-6" aria-hidden="true" />
-          </button>
+        <header className="border-b-2 border-hair px-5 py-4">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink">
+              {step === 1 ? (
+                <ShoppingBag
+                  className="h-6 w-6 text-blue"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              ) : (
+                <MapPin
+                  className="h-6 w-6 text-blue"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+              )}
+              {step === 1 ? "Mi pedido" : "Datos de entrega"}
+            </h2>
+            <button
+              type="button"
+              onClick={close}
+              aria-label="Cerrar"
+              className="grid h-9 w-9 place-items-center rounded-full text-ink transition hover:bg-blue/10"
+            >
+              <X className="h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
+
+          {count > 0 && (
+            <div className="mt-3 flex items-center gap-2" aria-hidden="true">
+              <span className="h-1.5 flex-1 rounded-full bg-blue" />
+              <span
+                className={`h-1.5 flex-1 rounded-full ${
+                  step === 2 ? "bg-blue" : "bg-hair"
+                }`}
+              />
+              <span className="ml-1 font-mono text-xs font-bold text-muted">
+                {step}/2
+              </span>
+            </div>
+          )}
         </header>
 
         {count === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-            <ShoppingBag className="h-12 w-12 text-hair" strokeWidth={1.5} aria-hidden="true" />
+            <ShoppingBag
+              className="h-12 w-12 text-hair"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
             <p className="font-display text-lg font-bold text-ink">
               Tu carrito está vacío
             </p>
@@ -234,7 +257,8 @@ export function CartDrawer() {
               Agrega tus antojos desde la carta y arma tu pedido.
             </p>
           </div>
-        ) : (
+        ) : step === 1 ? (
+          /* ---------- STEP 1 · order summary ---------- */
           <div className="flex-1 overflow-y-auto px-5 py-4">
             <ul className="space-y-3">
               {items.map((l) => (
@@ -260,7 +284,11 @@ export function CartDrawer() {
                       aria-label={`Quitar uno de ${l.name}`}
                       className="grid h-7 w-7 place-items-center rounded-full text-blue-ink transition hover:bg-blue/10 active:scale-90"
                     >
-                      <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                      <Minus
+                        className="h-4 w-4"
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
                     </button>
                     <span className="min-w-6 text-center font-display text-sm font-bold text-ink">
                       {l.qty}
@@ -271,7 +299,11 @@ export function CartDrawer() {
                       aria-label={`Agregar uno de ${l.name}`}
                       className="grid h-7 w-7 place-items-center rounded-full text-blue-ink transition hover:bg-blue/10 active:scale-90"
                     >
-                      <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                      <Plus
+                        className="h-4 w-4"
+                        strokeWidth={2.5}
+                        aria-hidden="true"
+                      />
                     </button>
                   </div>
                   <button
@@ -286,45 +318,66 @@ export function CartDrawer() {
               ))}
             </ul>
 
-            {/* delivery details */}
-            <div className="mt-6 space-y-3">
-              <p className="font-display font-bold text-ink">Datos de entrega</p>
-              <button
-                type="button"
-                onClick={handleLocate}
-                disabled={locating}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-blue bg-blue/5 px-4 py-2.5 font-bold text-blue-ink transition hover:bg-blue/10 disabled:opacity-60"
+            <button
+              type="button"
+              onClick={clear}
+              className="mt-4 text-sm font-semibold text-muted transition hover:text-ink"
+            >
+              Vaciar carrito
+            </button>
+          </div>
+        ) : (
+          /* ---------- STEP 2 · delivery details ---------- */
+          <div className="flex-1 overflow-y-auto px-5 py-4">
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className="mb-3 flex items-center gap-1 text-sm font-semibold text-blue-ink transition hover:text-blue"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              Volver al pedido
+            </button>
+
+            <DeliveryLocationMap
+              center={coords ?? CITY_CENTER}
+              onChange={onMapChange}
+              onLocateError={onLocateError}
+            />
+
+            {geoStatus && (
+              <p
+                className={`mt-2 text-xs ${
+                  geoStatus.ok ? "text-blue-ink" : "text-muted"
+                }`}
               >
-                {locating ? (
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                ) : (
-                  <MapPin className="h-5 w-5" aria-hidden="true" />
-                )}
-                {locating ? "Ubicando…" : "Usar mi ubicación (GPS)"}
-              </button>
-              {geoStatus && (
-                <p
-                  className={`text-xs ${
-                    geoStatus.ok ? "text-blue-ink" : "text-muted"
-                  }`}
+                {geoStatus.msg}
+              </p>
+            )}
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label
+                  htmlFor="cart-address"
+                  className="mb-1 block text-sm font-bold text-ink"
                 >
-                  {geoStatus.msg}
-                </p>
-              )}
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Tu nombre"
-                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue focus:outline-none"
-              />
-              <input
-                type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Tu dirección"
-                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue focus:outline-none"
-              />
+                  Dirección <span className="text-blue">*</span>
+                </label>
+                <input
+                  id="cart-address"
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Calle, número, referencia de la puerta"
+                  aria-required="true"
+                  aria-invalid={!!coords && trimmedAddress.length < 6}
+                  className={`w-full rounded-xl border-2 bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:outline-none ${
+                    !!coords && trimmedAddress.length < 6
+                      ? "border-amber focus:border-amber"
+                      : "border-hair focus:border-blue"
+                  }`}
+                />
+              </div>
+
               <select
                 value={zone}
                 onChange={(e) => setZone(e.target.value)}
@@ -340,26 +393,47 @@ export function CartDrawer() {
                   </option>
                 ))}
               </select>
+
               <input
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder="Referencia (opcional)"
+                placeholder="Referencia (opcional): color de puerta, piso…"
+                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue focus:outline-none"
+              />
+
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Tu nombre (opcional)"
                 className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue focus:outline-none"
               />
             </div>
-
-            <button
-              type="button"
-              onClick={clear}
-              className="mt-4 text-sm font-semibold text-muted transition hover:text-ink"
-            >
-              Vaciar carrito
-            </button>
           </div>
         )}
 
-        {count > 0 && (
+        {/* ---------- footer ---------- */}
+        {count > 0 && step === 1 && (
+          <footer className="border-t-2 border-hair px-5 py-4">
+            <div className="flex items-center justify-between">
+              <span className="text-muted">Subtotal</span>
+              <span className="font-display text-xl font-extrabold text-ink">
+                {formatPrice(subtotal)}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-blue py-3 font-bold text-paper shadow-[3px_4px_0_0_var(--color-blue-ink)] transition hover:-translate-y-0.5 hover:shadow-[1px_2px_0_0_var(--color-blue-ink)]"
+            >
+              Continuar a la entrega
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </footer>
+        )}
+
+        {count > 0 && step === 2 && (
           <footer className="border-t-2 border-hair px-5 py-4">
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-sm">
@@ -384,7 +458,7 @@ export function CartDrawer() {
               </div>
             </div>
 
-            {selectedZone ? (
+            {canSubmit ? (
               <a
                 href={waLink(message)}
                 target="_blank"
@@ -400,7 +474,7 @@ export function CartDrawer() {
                 disabled
                 className="mt-4 flex w-full cursor-not-allowed items-center justify-center rounded-full border-2 border-hair py-3 font-bold text-muted"
               >
-                Elige tu distrito para continuar
+                {blockReason}
               </button>
             )}
           </footer>

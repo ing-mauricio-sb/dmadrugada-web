@@ -166,7 +166,7 @@ export function buildOrderMessage(
     `📍 Dirección: ${form.address?.trim() || "(por confirmar)"}`,
   ];
   if (form.reference?.trim()) parts.push(`📝 Referencia: ${form.reference.trim()}`);
-  if (form.mapsUrl) parts.push(`🗺️ Ubicación GPS: ${form.mapsUrl}`);
+  if (form.mapsUrl) parts.push(`🗺️ Abrir en Google Maps: ${form.mapsUrl}`);
   parts.push("", "¡Gracias! 🙌");
 
   return parts.join("\n");
