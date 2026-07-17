@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { ZONES } from "@/lib/zones";
 import { formatPrice } from "@/lib/menu";
+import { WhatsAppButton } from "./WhatsAppButton";
+import { MoonDoodle } from "./Doodles";
 
 /** Searchable, scannable grid of delivery zones with their fee. */
 export function ZoneCards() {
@@ -15,7 +17,9 @@ export function ZoneCards() {
 
   return (
     <div>
-      <div className="mx-auto flex max-w-md items-center gap-2 rounded-full border-2 border-blue bg-paper px-4 py-2.5">
+      {/* focus ring lands on the pill (focus-within) — the inner input keeps
+          outline-none, so keyboard users still get a visible indicator */}
+      <div className="mx-auto flex max-w-md items-center gap-2 rounded-full border-2 border-blue bg-paper px-4 py-2.5 transition-shadow focus-within:shadow-[0_0_0_3px_var(--color-blue)]">
         <Search className="h-5 w-5 shrink-0 text-blue" aria-hidden="true" />
         <input
           type="text"
@@ -27,10 +31,30 @@ export function ZoneCards() {
         />
       </div>
 
+      {/* announce filter results without visual noise */}
+      <p aria-live="polite" className="sr-only">
+        {filtered.length === 0
+          ? "Ninguna zona coincide con la búsqueda"
+          : `${filtered.length} ${filtered.length === 1 ? "zona encontrada" : "zonas encontradas"}`}
+      </p>
+
       {filtered.length === 0 ? (
-        <p className="mt-8 text-center text-muted">
-          No encontramos esa zona. Escríbenos por WhatsApp y la confirmamos.
-        </p>
+        <div className="sticker mx-auto mt-8 max-w-md p-8 text-center">
+          <MoonDoodle className="animate-float-soft mx-auto h-10 w-10" />
+          <p className="mt-3 font-display text-lg font-bold text-ink">
+            No encontramos esa zona
+          </p>
+          <p className="mt-1 text-sm text-muted">
+            Escríbenos por WhatsApp y te confirmamos la cobertura al toque.
+          </p>
+          <div className="mt-5 flex justify-center">
+            <WhatsAppButton
+              size="sm"
+              label="Consultar mi zona"
+              message="Hola D'Madrugada 🌙, no encontré mi zona en la web. ¿Llegan hasta mi dirección?"
+            />
+          </div>
+        </div>
       ) : (
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((z) => (

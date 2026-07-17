@@ -38,16 +38,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) setItems(parsed);
+    // Defer one tick: hydrating from localStorage must stay async so the
+    // effect never triggers a synchronous cascading render.
+    const id = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setItems(parsed);
+        }
+      } catch {
+        /* ignore corrupt storage */
       }
-    } catch {
-      /* ignore corrupt storage */
-    }
-    setHydrated(true);
+      setHydrated(true);
+    }, 0);
+    return () => clearTimeout(id);
   }, []);
 
   useEffect(() => {

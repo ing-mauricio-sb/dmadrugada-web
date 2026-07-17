@@ -24,26 +24,28 @@ export function Footer() {
           <h3 className="text-xs font-bold uppercase tracking-[0.18em] text-paper/60">
             Navega
           </h3>
-          <ul className="mt-4 space-y-2.5 text-sm">
-            <li>
-              <Link href="/" className="text-paper/85 transition hover:text-amber">
-                Inicio
-              </Link>
-            </li>
-            <li>
-              <Link href="/carta" className="text-paper/85 transition hover:text-amber">
-                Carta
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/zonas-delivery"
-                className="text-paper/85 transition hover:text-amber"
-              >
-                Zonas de delivery
-              </Link>
-            </li>
-          </ul>
+          <nav aria-label="Navegación del pie de página">
+            <ul className="mt-4 space-y-2.5 text-sm">
+              <li>
+                <Link href="/" className="text-paper/85 transition hover:text-amber">
+                  Inicio
+                </Link>
+              </li>
+              <li>
+                <Link href="/carta" className="text-paper/85 transition hover:text-amber">
+                  Carta
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/zonas-delivery"
+                  className="text-paper/85 transition hover:text-amber"
+                >
+                  Zonas de delivery
+                </Link>
+              </li>
+            </ul>
+          </nav>
         </div>
 
         <div>
@@ -86,7 +88,8 @@ export function Footer() {
       </div>
 
       <div className="relative border-t border-paper/15 px-5 py-5 text-center text-xs text-paper/60">
-        © 2026 D&apos;Madrugada — Delivery nocturno en {SITE.city}, {SITE.region}.
+        © {new Date().getFullYear()} D&apos;Madrugada — Delivery nocturno en{" "}
+        {SITE.city}, {SITE.region}.
       </div>
     </footer>
   );

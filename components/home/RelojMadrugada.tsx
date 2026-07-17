@@ -1,5 +1,6 @@
 import { Reveal } from "@/components/Reveal";
 import { MoonDoodle } from "@/components/Doodles";
+import { SITE } from "@/lib/site";
 
 /** Section 3 — friendly hours card (9:00 PM → 4:30 AM). */
 export function RelojMadrugada() {
@@ -12,7 +13,7 @@ export function RelojMadrugada() {
             Nuestro horario
           </p>
           <div className="mt-3 font-display text-[clamp(1.9rem,6vw,3.5rem)] font-extrabold leading-none text-ink">
-            9:00 PM — 4:30 AM
+            {SITE.hoursText}
           </div>
 
           {/* progress: 8 PM → 5 AM, window highlighted */}

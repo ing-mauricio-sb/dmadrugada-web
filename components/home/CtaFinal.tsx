@@ -13,7 +13,7 @@ export function CtaFinal() {
           <StarDoodle className="pointer-events-none absolute right-10 top-12 h-5 w-5 opacity-70" />
           <div className="grid items-center gap-8 md:grid-cols-[1fr_auto]">
             <div className="text-center md:text-left">
-              <h2 className="font-display text-[clamp(2rem,6vw,4rem)] font-extrabold leading-[0.95] text-ink">
+              <h2 className="text-balance font-display text-[clamp(2rem,6vw,4rem)] font-extrabold leading-[0.95] text-ink">
                 El hambre <span className="text-blue">no espera</span>.
               </h2>
               <p className="mt-4 text-ink/80">

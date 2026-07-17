@@ -65,9 +65,13 @@ body {
       transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
       box-shadow 0.25s ease;
   }
-  .sticker-hover:hover {
-    transform: translate(-1px, -1px) rotate(-1deg);
-    box-shadow: 2px 3px 0 0 var(--color-blue-ink);
+  /* hover only on devices with a real pointer — on touch the tilt would
+     "stick" after the tap until the next touch elsewhere */
+  @media (hover: hover) {
+    .sticker-hover:hover {
+      transform: translate(-1px, -1px) rotate(-1deg);
+      box-shadow: 2px 3px 0 0 var(--color-blue-ink);
+    }
   }
   .badge-amber {
     display: inline-flex;
@@ -110,6 +114,18 @@ body {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }
 }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes menuDrop {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 /* entrance / idle helpers */
 .pop                { opacity: 0; animation: pop 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
@@ -119,12 +135,29 @@ body {
 .animate-twinkle    { animation: twinkle 3s ease-in-out infinite; }
 .animate-pulse-halo { animation: pulseHalo 3.2s ease-in-out infinite; }
 .animate-marquee    { animation: marquee 32s linear infinite; }
+.animate-fade-in    { animation: fadeIn 0.25s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-menu-drop  { animation: menuDrop 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
 
-/* visible keyboard focus on every interactive element */
-:where(a, button, [role="button"], [tabindex], input):focus-visible {
+/* hide scrollbars on horizontal pill rails (still scrollable) */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* on-brand text selection */
+::selection {
+  background: var(--color-amber);
+  color: var(--color-ink);
+}
+
+/* visible keyboard focus on every interactive element (no forced radius —
+   the outline follows each element's own border-radius, e.g. pill buttons) */
+:where(a, button, [role="button"], [tabindex], input, select, textarea):focus-visible {
   outline: 3px solid var(--color-blue);
   outline-offset: 3px;
-  border-radius: 8px;
 }
 
 /* respect reduced motion everywhere */

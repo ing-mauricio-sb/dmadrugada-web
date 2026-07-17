@@ -3,6 +3,7 @@ import { MENU } from "@/lib/menu";
 import { MenuCard } from "@/components/MenuCard";
 import { CategoryNav } from "@/components/CategoryNav";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { StarDoodle } from "@/components/Doodles";
 
 export const metadata: Metadata = {
   title: "Carta",
@@ -15,7 +16,7 @@ export default function CartaPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 pb-24 pt-28">
       <header className="text-center">
-        <h1 className="font-display text-[clamp(2.5rem,7vw,5rem)] font-extrabold uppercase leading-none">
+        <h1 className="text-balance font-display text-[clamp(2.5rem,7vw,5rem)] font-extrabold uppercase leading-none">
           La carta
         </h1>
         <p className="mt-4 text-sm font-bold uppercase tracking-[0.2em] text-blue-ink">
@@ -44,7 +45,9 @@ export default function CartaPage() {
         ))}
       </div>
 
-      <div className="sticker mt-20 p-8 text-center">
+      <div className="sticker relative mt-20 overflow-hidden p-8 text-center sm:p-12">
+        <StarDoodle className="pointer-events-none absolute left-6 top-6 h-7 w-7 opacity-80" />
+        <StarDoodle className="pointer-events-none absolute bottom-6 right-8 h-5 w-5 opacity-70" />
         <h2 className="font-display text-2xl font-bold text-ink">¿Listo para pedir?</h2>
         <p className="mt-2 text-muted">Escríbenos y te lo llevamos calientito.</p>
         <div className="mt-6 flex justify-center">

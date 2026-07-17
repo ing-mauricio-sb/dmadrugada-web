@@ -10,7 +10,7 @@ export function Manifiesto() {
           <StarDoodle className="pointer-events-none absolute left-6 top-6 h-8 w-8 opacity-80" />
           <StarDoodle className="pointer-events-none absolute right-9 top-10 h-5 w-5 opacity-70" />
           <StarDoodle className="pointer-events-none absolute bottom-8 right-12 h-7 w-7 opacity-70" />
-          <p className="mx-auto max-w-3xl font-display text-[clamp(1.75rem,4.5vw,3rem)] font-bold leading-[1.2]">
+          <p className="mx-auto max-w-3xl text-balance font-display text-[clamp(1.75rem,4.5vw,3rem)] font-bold leading-[1.2]">
             Mientras la ciudad duerme,{" "}
             <span className="text-amber">nosotros cocinamos</span>. Tu madrugada
             tiene quien la acompañe.

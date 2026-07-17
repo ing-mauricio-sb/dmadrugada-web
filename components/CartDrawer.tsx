@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   X,
   Plus,
@@ -195,11 +196,11 @@ export function CartDrawer() {
         type="button"
         aria-label="Cerrar"
         onClick={close}
-        className="absolute inset-0 bg-night/50 backdrop-blur-sm"
+        className="animate-fade-in absolute inset-0 bg-night/50 backdrop-blur-sm"
       />
 
       {/* panel */}
-      <div className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-paper shadow-2xl">
+      <div className="animate-slide-in-right absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-paper shadow-2xl">
         <header className="border-b-2 border-hair px-5 py-4">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-display text-xl font-extrabold text-ink">
@@ -256,6 +257,13 @@ export function CartDrawer() {
             <p className="text-sm text-muted">
               Agrega tus antojos desde la carta y arma tu pedido.
             </p>
+            <Link
+              href="/carta"
+              onClick={close}
+              className="mt-2 inline-flex h-11 items-center justify-center rounded-full border-2 border-blue px-6 text-sm font-bold text-blue-ink transition hover:bg-blue/10"
+            >
+              Ver la carta
+            </Link>
           </div>
         ) : step === 1 ? (
           /* ---------- STEP 1 · order summary ---------- */
@@ -370,7 +378,7 @@ export function CartDrawer() {
                   placeholder="Calle, número, referencia de la puerta"
                   aria-required="true"
                   aria-invalid={!!coords && trimmedAddress.length < 6}
-                  className={`w-full rounded-xl border-2 bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:outline-none ${
+                  className={`w-full rounded-xl border-2 bg-paper px-4 py-2.5 text-ink placeholder:text-muted ${
                     !!coords && trimmedAddress.length < 6
                       ? "border-amber focus:border-amber"
                       : "border-hair focus:border-blue"
@@ -382,7 +390,7 @@ export function CartDrawer() {
                 value={zone}
                 onChange={(e) => setZone(e.target.value)}
                 aria-label="Tu distrito"
-                className={`w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 focus:border-blue focus:outline-none ${
+                className={`w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 focus:border-blue ${
                   zone ? "text-ink" : "text-muted"
                 }`}
               >
@@ -399,7 +407,7 @@ export function CartDrawer() {
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 placeholder="Referencia (opcional): color de puerta, piso…"
-                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue focus:outline-none"
+                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue"
               />
 
               <input
@@ -407,7 +415,7 @@ export function CartDrawer() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Tu nombre (opcional)"
-                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue focus:outline-none"
+                className="w-full rounded-xl border-2 border-hair bg-paper px-4 py-2.5 text-ink placeholder:text-muted focus:border-blue"
               />
             </div>
           </div>

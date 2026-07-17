@@ -25,14 +25,14 @@ export function AntojosSequence() {
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {ANTOJOS.map((item, i) => (
           <Reveal key={item.name} delay={i * 0.08}>
-            <article className="sticker sticker-hover flex h-full flex-col p-4">
-              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+            <article className="sticker sticker-hover group flex h-full flex-col p-4">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-sky">
                 <Image
                   src={item.img!}
                   alt={item.name}
                   fill
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  className="object-cover"
+                  className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                 />
               </div>
               <h3 className="mt-4 font-display text-lg font-bold text-ink">
@@ -53,9 +53,15 @@ export function AntojosSequence() {
       <div className="mt-10 text-center">
         <Link
           href="/carta"
-          className="inline-flex items-center gap-1 font-bold text-blue-ink hover:underline"
+          className="group inline-flex items-center gap-1.5 font-bold text-blue-ink transition-colors hover:text-blue"
         >
-          Ver toda la carta →
+          Ver toda la carta
+          <span
+            aria-hidden="true"
+            className="transition-transform duration-300 group-hover:translate-x-1"
+          >
+            →
+          </span>
         </Link>
       </div>
     </section>

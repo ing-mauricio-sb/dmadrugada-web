@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { UtensilsCrossed, MessageCircle, Bike } from "lucide-react";
 import { ZONES } from "@/lib/zones";
 import { formatPrice } from "@/lib/menu";
+import { SITE } from "@/lib/site";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { StepCard } from "@/components/StepCard";
 import { Reveal } from "@/components/Reveal";
@@ -26,7 +27,7 @@ export default function ZonasPage() {
         <p className="badge-amber text-xs uppercase tracking-[0.16em]">
           Cobertura nocturna
         </p>
-        <h1 className="mt-5 font-display text-[clamp(2.25rem,7vw,4.5rem)] font-extrabold leading-[0.95] text-ink">
+        <h1 className="mt-5 text-balance font-display text-[clamp(2.25rem,7vw,4.5rem)] font-extrabold leading-[0.95] text-ink">
           ¿Llegamos a tu <span className="text-blue">zona</span>?
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-lg text-ink/80">
@@ -56,7 +57,7 @@ export default function ZonasPage() {
               Ventana de reparto
             </p>
             <div className="mt-3 font-display text-[clamp(1.8rem,6vw,3.25rem)] font-extrabold leading-none text-ink">
-              9:00 PM — 4:30 AM
+              {SITE.hoursText}
             </div>
             <div className="mx-auto mt-8 max-w-xl">
               <div className="relative h-2.5 rounded-full bg-hair">

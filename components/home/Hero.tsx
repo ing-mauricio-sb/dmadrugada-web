@@ -111,7 +111,7 @@ export function Hero() {
             <span className="text-blue">no duerme</span>
           </h1>
           <p
-            className="pop mx-auto mt-6 max-w-xl text-base leading-relaxed text-ink/80 sm:text-lg lg:mx-0"
+            className="pop mx-auto mt-6 max-w-xl text-pretty text-base leading-relaxed text-ink/80 sm:text-lg lg:mx-0"
             style={{ animationDelay: "0.28s" }}
           >
             Delivery en Chiclayo de 9:00 PM a 4:30 AM. Alitas, chaufa, broaster y

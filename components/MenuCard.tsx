@@ -4,18 +4,18 @@ import { AddToCartButton } from "./AddToCartButton";
 
 export function MenuCard({ item }: { item: MenuItem }) {
   return (
-    <div className="sticker sticker-hover flex gap-4 p-4">
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 border-blue">
+    <div className="sticker sticker-hover group flex gap-4 p-4">
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 border-blue bg-sky">
         {item.img ? (
           <Image
             src={item.img}
             alt={item.name}
             fill
             sizes="80px"
-            className="object-cover"
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-sky font-display text-2xl font-extrabold text-blue">
+          <div className="grid h-full w-full place-items-center font-display text-2xl font-extrabold text-blue">
             {item.name.charAt(0)}
           </div>
         )}
